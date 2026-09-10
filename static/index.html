@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Email Catch-All</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      --bg: #16130f;
+      --panel: #1e1a16;
+      --raised: #2a241e;
+      --ink: #f0e8d8;
+      --muted: #9a8c78;
+      --accent: #e0a04a;
+      --wax: #c45c26;
+      --danger: #d46a5c;
+      --line: #3a332b;
+      --paper: #f4ecdc;
+      --paper-ink: #241c14;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+    }
+    .mark {
+      font-family: Palatino, "Iowan Old Style", Georgia, serif;
+      font-size: 1.25rem;
+      letter-spacing: 0.02em;
+    }
+    .mark em { color: var(--accent); font-style: normal; }
+    .meta {
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      margin-left: auto;
+    }
+    .btn {
+      background: var(--raised);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font: inherit;
+    }
+    .btn:hover { border-color: var(--accent); }
+    .btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+    .layout {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(260px, 340px) 1fr;
+    }
+    .sidebar {
+      border-right: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background: var(--panel);
+    }
+    .tools { padding: 10px; }
+    .tools input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font: inherit;
+    }
+    .list { overflow: auto; flex: 1; }
+    .item {
+      display: block;
+      width: 100%;
+      text-align: left;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: transparent;
+      color: inherit;
+      padding: 12px 14px;
+      cursor: pointer;
+      font: inherit;
+    }
+    .item:hover { background: var(--raised); }
+    .item.active { background: #332a22; box-shadow: inset 3px 0 0 var(--accent); }
+    .item .from { font-weight: 600; font-size: 0.92rem; }
+    .item .subj { margin-top: 2px; }
+    .item .preview { color: var(--muted); font-size: 0.8rem; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item .when { float: right; color: var(--muted); font-size: 0.75rem; }
+    .pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+    .empty, .blank {
+      margin: auto;
+      text-align: center;
+      color: var(--muted);
+      padding: 40px;
+      max-width: 28rem;
+    }
+    .empty code, .blank code {
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      color: var(--accent);
+    }
+    .msg-head {
+      padding: 16px 20px 8px;
+      border-bottom: 1px solid var(--line);
+    }
+    .subject {
+      font-family: Palatino, "Iowan Old Style", Georgia, serif;
+      font-size: 1.5rem;
+      margin: 0 0 10px;
+    }
+    .kv { color: var(--muted); font-size: 0.88rem; line-height: 1.5; }
+    .kv b { color: var(--ink); font-weight: 600; }
+    .tabs {
+      display: flex;
+      gap: 6px;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--line);
+      align-items: center;
+    }
+    .tabs button.active { background: var(--accent); color: #1c140c; border-color: var(--accent); }
+    .files { display: flex; gap: 8px; flex-wrap: wrap; padding: 8px 16px; }
+    .files a {
+      color: var(--accent);
+      text-decoration: none;
+      border: 1px solid var(--line);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.82rem;
+    }
+    .body { flex: 1; min-height: 0; }
+    iframe, pre {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      margin: 0;
+    }
+    pre {
+      padding: 16px 20px;
+      overflow: auto;
+      font: 13px/1.45 ui-monospace, "SF Mono", Menlo, monospace;
+      white-space: pre-wrap;
+      background: #120f0c;
+    }
+    iframe { background: var(--paper); }
+    .count { color: var(--accent); }
+    @media (max-width: 800px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { max-height: 40vh; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="mark">Email <em>Catch-All</em></div>
+    <div class="meta" id="status">loading…</div>
+    <button class="btn danger" id="clear" type="button">Empty tray</button>
+  </header>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="tools">
+        <input id="q" type="search" placeholder="Search from, to, subject…" autocomplete="off">
+      </div>
+      <div class="list" id="list"></div>
+    </aside>
+    <main class="pane" id="pane">
+      <div class="blank" id="blank">
+        <p>Nothing selected.</p>
+        <p>Send mail to <code>127.0.0.1:1025</code> — any recipient is accepted.</p>
+      </div>
+    </main>
+  </div>
+  <script>
+    const state = { messages: [], selected: null, detail: null, tab: "html", query: "", seen: new Set() };
+
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[c]));
+
+    function when(iso) {
+      if (!iso) return "";
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return iso;
+      return d.toLocaleString();
+    }
+
+    async function api(path, opts) {
+      const res = await fetch(path, opts);
+      if (!res.ok) throw new Error(await res.text());
+      const type = res.headers.get("content-type") || "";
+      if (type.includes("json")) return res.json();
+      return res.text();
+    }
+
+    async function refreshStatus() {
+      const s = await api("/api/status");
+      $("status").textContent = `SMTP ${s.smtp_host}:${s.smtp_port}   web :${s.http_port}   ${s.messages} stored`;
+    }
+
+    async function refreshList() {
+      const data = await api("/api/messages");
+      state.messages = data.messages;
+      renderList();
+      if (state.selected && !state.messages.some((m) => m.id === state.selected)) {
+        state.selected = null;
+        state.detail = null;
+        renderPane();
+      }
+    }
+
+    function filtered() {
+      const q = state.query.trim().toLowerCase();
+      if (!q) return state.messages;
+      return state.messages.filter((m) => {
+        const blob = [m.from, m.subject, (m.to || []).join(" "), m.preview].join(" ").toLowerCase();
+        return blob.includes(q);
+      });
+    }
+
+    function renderList() {
+      const rows = filtered();
+      if (!rows.length) {
+        $("list").innerHTML = `<div class="empty">${state.messages.length ? "No matches." : "The tray is empty."}</div>`;
+        return;
+      }
+      $("list").innerHTML = rows.map((m) => `
+        <button class="item ${m.id === state.selected ? "active" : ""}" data-id="${esc(m.id)}" type="button">
+          <span class="when">${esc(when(m.received || m.date))}</span>
+          <div class="from">${esc(m.from_name || m.from)}</div>
+          <div class="subj">${esc(m.subject)}</div>
+          <div class="preview">${esc(m.preview || "")}</div>
+        </button>
+      `).join("");
+      $("list").querySelectorAll(".item").forEach((el) => {
+        el.addEventListener("click", () => openMessage(el.dataset.id));
+      });
+    }
+
+    async function openMessage(id) {
+      state.selected = id;
+      state.detail = await api(`/api/messages/${id}`);
+      if (state.detail.html) state.tab = "html";
+      else if (state.detail.text) state.tab = "text";
+      else state.tab = "headers";
+      renderList();
+      renderPane();
+    }
+
+    function renderPane() {
+      const m = state.detail;
+      if (!m) {
+        $("pane").innerHTML = `<div class="blank" id="blank">
+          <p>Nothing selected.</p>
+          <p>Send mail to <code>127.0.0.1:1025</code> — any recipient is accepted.</p>
+        </div>`;
+        return;
+      }
+      const tabs = [
+        m.html ? ["html", "HTML"] : null,
+        m.text ? ["text", "Text"] : null,
+        ["headers", "Headers"],
+        ["raw", "Raw"]
+      ].filter(Boolean);
+      const files = (m.files || []).map((f) =>
+        `<a href="/api/messages/${esc(m.id)}/attachments/${f.index}" download="${esc(f.filename)}">${esc(f.filename)} (${f.size} B)</a>`
+      ).join("");
+      let body = "";
+      if (state.tab === "html" && m.html) {
+        body = `<iframe sandbox="allow-same-origin allow-popups" src="/api/messages/${esc(m.id)}/html" title="HTML body"></iframe>`;
+      } else if (state.tab === "text") {
+        body = `<pre>${esc(m.text || "")}</pre>`;
+      } else if (state.tab === "headers") {
+        body = `<pre>${esc((m.headers || []).map(([k, v]) => k + ": " + v).join("\n"))}</pre>`;
+      } else {
+        body = `<pre id="raw">Loading…</pre>`;
+        fetch(`/api/messages/${m.id}/raw`).then((r) => r.text()).then((t) => {
+          const el = document.getElementById("raw");
+          if (el) el.textContent = t;
+        });
+      }
+      $("pane").innerHTML = `
+        <div class="msg-head">
+          <h1 class="subject">${esc(m.subject)}</h1>
+          <div class="kv"><b>From</b> ${esc(m.from)}</div>
+          <div class="kv"><b>To</b> ${esc((m.to || []).join(", "))}</div>
+          ${m.cc && m.cc.length ? `<div class="kv"><b>Cc</b> ${esc(m.cc.join(", "))}</div>` : ""}
+          <div class="kv"><b>Date</b> ${esc(when(m.date))}</div>
+        </div>
+        <div class="tabs">
+          ${tabs.map(([id, label]) => `<button class="btn ${state.tab === id ? "active" : ""}" data-tab="${id}" type="button">${label}</button>`).join("")}
+          <a class="btn" href="/api/messages/${esc(m.id)}/raw" download="${esc(m.id)}.eml">Download .eml</a>
+          <button class="btn danger" id="del" type="button">Delete</button>
+        </div>
+        ${files ? `<div class="files">${files}</div>` : ""}
+        <div class="body">${body}</div>
+      `;
+      $("pane").querySelectorAll("[data-tab]").forEach((el) => {
+        el.addEventListener("click", () => { state.tab = el.dataset.tab; renderPane(); });
+      });
+      $("del").addEventListener("click", async () => {
+        await api(`/api/messages/${m.id}`, { method: "DELETE" });
+        state.selected = null;
+        state.detail = null;
+        await refreshList();
+        await refreshStatus();
+        renderPane();
+      });
+    }
+
+    $("q").addEventListener("input", (e) => {
+      state.query = e.target.value;
+      renderList();
+    });
+    $("clear").addEventListener("click", async () => {
+      if (!confirm("Delete every stored message?")) return;
+      await api("/api/messages", { method: "DELETE" });
+      state.selected = null;
+      state.detail = null;
+      await refreshList();
+      await refreshStatus();
+      renderPane();
+    });
+
+    async function tick() {
+      try {
+        await refreshList();
+        await refreshStatus();
+      } catch (err) {
+        $("status").textContent = "server unreachable";
+      }
+    }
+
+    tick();
+    setInterval(tick, 2000);
+  </script>
+</body>
+</html>
