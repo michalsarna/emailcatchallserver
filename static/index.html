@@ -98,6 +98,7 @@
     .item:hover { background: var(--raised); }
     .item.active { background: #332a22; box-shadow: inset 3px 0 0 var(--accent); }
     .item .from { font-weight: 600; font-size: 0.92rem; }
+    .item .to { color: var(--muted); font-size: 0.8rem; margin-top: 2px; }
     .item .subj { margin-top: 2px; }
     .item .preview { color: var(--muted); font-size: 0.8rem; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .item .when { float: right; color: var(--muted); font-size: 0.75rem; }
@@ -241,6 +242,7 @@
         <button class="item ${m.id === state.selected ? "active" : ""}" data-id="${esc(m.id)}" type="button">
           <span class="when">${esc(when(m.received || m.date))}</span>
           <div class="from">${esc(m.from_name || m.from)}</div>
+          <div class="to">To: ${esc((m.to || []).join(", "))}</div>
           <div class="subj">${esc(m.subject)}</div>
           <div class="preview">${esc(m.preview || "")}</div>
         </button>

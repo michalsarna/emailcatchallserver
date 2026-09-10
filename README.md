@@ -22,6 +22,12 @@ That's it — there's nothing to build or install.
 ## Run
 
 ```bash
+./start.sh
+```
+
+Or directly with `python3`:
+
+```bash
 python3 mailcatch.py
 ```
 
@@ -34,6 +40,10 @@ python3 mailcatch.py
 ```bash
 python3 mailcatch.py --host 0.0.0.0 --http-port 8001 --smtp-port 1025 --data-dir ./data
 ```
+
+`start.sh` only forwards `HTTP_PORT`/`SMTP_PORT` env vars (defaulting to
+`8001`/`1025`) and refuses to start if either port is already in use; use
+`python3 mailcatch.py` directly for `--host`/`--data-dir` or other flags.
 
 | Flag | Default | Description |
 | --- | --- | --- |
